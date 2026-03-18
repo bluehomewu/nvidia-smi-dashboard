@@ -1,0 +1,15 @@
+services:
+  nvidia-dashboard:
+    build: .
+    container_name: nvidia-smi-dashboard
+    pid: host
+    ports:
+      - "5000:5000"
+    restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

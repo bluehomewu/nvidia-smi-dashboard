@@ -7,6 +7,12 @@
 ![Docker](https://img.shields.io/badge/Docker-Supported-blue?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+## 截圖展示
+
+| 多 GPU 總覽（折疊） | GPU 詳細監控（展開） |
+|:---:|:---:|
+| ![多 GPU 總覽](static/images/20260318-114350.png) | ![GPU 詳細監控](static/images/20260318-114500.png) |
+
 ## 功能特色
 
 - **即時監控** - 每 3 秒自動更新數據

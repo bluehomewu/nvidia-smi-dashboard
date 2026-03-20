@@ -22,8 +22,10 @@
 - **可折疊 GPU 卡片** - 多 GPU 時預設折疊，附摘要列；展開狀態透過 cookie 保存
 - **程序列表** - 顯示執行中的程序，包含 PID、類型、名稱與記憶體用量
 - **正體中文介面** - 完整 zh-TW 使用者介面
+- **多主機監控** - 透過設定介面加入區域網路內其他主機，集中顯示所有 GPU 狀態
 - **Docker 部署** - 一行指令即可部署，支援 GPU 直通
 - **響應式設計** - 支援桌面與行動裝置
+- **跨平台** - 支援 Linux（Docker / gunicorn）與 Windows（waitress / PM2）
 
 ## 監控指標
 
@@ -85,10 +87,62 @@ python app.py
 gunicorn --bind 0.0.0.0:5000 --workers 2 --threads 4 app:app
 
 # 執行（正式環境 - Windows）
-waitress-serve --host 0.0.0.0 --port 5000 app:app
+waitress-serve --host 0.0.0.0 --port 5000 --threads=8 app:app
 ```
 
 啟動後即可透過 `http://localhost:5000` 存取監控面板。
+
+### 方式三：PM2 管理（Windows）
+
+適合 Windows 環境下的常駐服務管理與開機自啟動。
+
+```bash
+# 安裝 PM2（需先安裝 Node.js）
+npm install -g pm2
+
+# 啟動服務（在 cmd 中執行，不要使用 PowerShell）
+cd E:\path\to\nvidia-smi-dashboard
+pm2 start waitress-serve --interpreter none --name gpu-dashboard -- --host 0.0.0.0 --port 5000 --threads=8 app:app
+
+# 儲存 PM2 程序列表
+pm2 save
+
+# 設定開機自啟動
+npm install -g pm2-windows-startup
+pm2-startup install
+pm2 save
+```
+
+常用管理指令：
+
+```bash
+pm2 status                 # 查看服務狀態
+pm2 logs gpu-dashboard     # 查看日誌
+pm2 restart gpu-dashboard  # 重啟服務
+pm2 stop gpu-dashboard     # 停止服務
+pm2 delete gpu-dashboard   # 移除服務
+```
+
+更新版本（在 cmd 中執行）：
+
+```bash
+# 1. 停止並刪除舊服務
+pm2 stop gpu-dashboard
+pm2 delete gpu-dashboard
+
+# 2. 拉取最新版本
+cd E:\path\to\nvidia-smi-dashboard
+git pull
+
+# 3. 更新相依套件
+pip install -r requirements.txt
+
+# 4. 重新啟動服務
+pm2 start waitress-serve --interpreter none --name gpu-dashboard -- --host 0.0.0.0 --port 5000 --threads=8 app:app
+
+# 5. 儲存程序列表（確保開機自啟套用新版本）
+pm2 save
+```
 
 ## 專案結構
 

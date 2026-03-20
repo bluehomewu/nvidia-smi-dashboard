@@ -81,8 +81,11 @@ pip install -r requirements.txt
 # 執行（開發模式）
 python app.py
 
-# 執行（正式環境）
+# 執行（正式環境 - Linux / macOS）
 gunicorn --bind 0.0.0.0:5000 --workers 2 --threads 4 app:app
+
+# 執行（正式環境 - Windows）
+waitress-serve --host 0.0.0.0 --port 5000 app:app
 ```
 
 啟動後即可透過 `http://localhost:5000` 存取監控面板。

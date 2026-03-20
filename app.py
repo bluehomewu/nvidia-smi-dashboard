@@ -1,4 +1,5 @@
 import os
+import platform
 import subprocess
 import xml.etree.ElementTree as ET
 
@@ -6,14 +7,29 @@ from flask import Flask, jsonify, render_template
 
 app = Flask(__name__)
 
+IS_WINDOWS = platform.system() == "Windows"
+
 
 def _get_process_name(pid):
-    """Read process name from /proc (works with --pid=host in Docker)."""
+    """Resolve process name by PID. Uses /proc on Linux, tasklist on Windows."""
+    if IS_WINDOWS:
+        try:
+            result = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+                capture_output=True, text=True, timeout=5,
+            )
+            for line in result.stdout.strip().splitlines():
+                parts = line.strip('"').split('","')
+                if len(parts) >= 2:
+                    return parts[0]
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+        return ""
+    # Linux: read from /proc
     try:
         with open(f"/proc/{pid}/cmdline", "rb") as f:
             cmdline = f.read().decode("utf-8", errors="replace").replace("\x00", " ").strip()
         if cmdline:
-            # Return the basename of the first argument
             return os.path.basename(cmdline.split()[0])
     except (FileNotFoundError, PermissionError, ProcessLookupError):
         pass
@@ -27,9 +43,20 @@ def _get_process_name(pid):
 
 def parse_nvidia_smi():
     """Call nvidia-smi and parse XML output into structured data."""
+    # On Windows, nvidia-smi is typically not on PATH
+    if IS_WINDOWS:
+        nvidia_smi = os.path.join(
+            os.environ.get("ProgramFiles", r"C:\Program Files"),
+            "NVIDIA Corporation", "NVSMI", "nvidia-smi.exe",
+        )
+        if not os.path.isfile(nvidia_smi):
+            nvidia_smi = "nvidia-smi"  # fallback to PATH
+    else:
+        nvidia_smi = "nvidia-smi"
+
     try:
         result = subprocess.run(
-            ["nvidia-smi", "-q", "-x"],
+            [nvidia_smi, "-q", "-x"],
             capture_output=True,
             text=True,
             timeout=10,

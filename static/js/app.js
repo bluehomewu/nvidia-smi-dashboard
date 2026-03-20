@@ -3,14 +3,17 @@ const HISTORY_LENGTH = 60; // Keep 60 data points (~3 minutes at 3s interval)
 const COOKIE_NAME = "gpu_expanded";
 const COOKIE_DAYS = 30;
 
-// Per-GPU history data
+// Per-GPU history data (keyed by "hostId-gpuIndex")
 const gpuHistory = {};
 
-// Per-GPU chart instances
+// Per-GPU chart instances (keyed by "hostId-gpuIndex")
 const gpuCharts = {};
 
-// Total GPU count (set after first fetch)
+// Total GPU count across all hosts
 let totalGpuCount = 0;
+
+// Previous host structure signature for detecting changes
+let lastStructure = "";
 
 // ===== Theme Management =====
 function getThemeSetting() {
@@ -19,7 +22,6 @@ function getThemeSetting() {
 }
 
 function setTheme(mode) {
-  // mode: "light", "dark", "auto"
   const d = new Date();
   d.setTime(d.getTime() + COOKIE_DAYS * 86400000);
   document.cookie = "theme=" + mode + ";expires=" + d.toUTCString() + ";path=/;SameSite=Lax";
@@ -46,15 +48,18 @@ function getCSS(varName) {
 }
 
 function rebuildAllCharts() {
-  // Destroy and recreate all charts so they pick up new theme colors
-  Object.keys(gpuCharts).forEach((gpuIndex) => {
-    Object.values(gpuCharts[gpuIndex]).forEach((c) => c.destroy());
-    delete gpuCharts[gpuIndex];
+  Object.keys(gpuCharts).forEach((key) => {
+    Object.values(gpuCharts[key]).forEach((c) => c.destroy());
+    delete gpuCharts[key];
   });
   if (lastData) {
-    // Small delay to let CSS variables update
     setTimeout(() => {
-      lastData.gpus.forEach((gpu, i) => createOrUpdateCharts(i, gpu));
+      lastData.hosts.forEach((hostEntry) => {
+        hostEntry.data.gpus.forEach((gpu, i) => {
+          const key = hostEntry.host_id + "-" + i;
+          createOrUpdateCharts(key, gpu);
+        });
+      });
     }, 50);
   }
 }
@@ -83,55 +88,63 @@ function setCookie(name, value, days) {
 
 function getExpandedSet() {
   const raw = getCookie(COOKIE_NAME);
-  if (raw === null) return null; // No cookie yet
+  if (raw === null) return null;
   if (raw === "") return new Set();
-  return new Set(raw.split(",").map(Number));
+  return new Set(raw.split(","));
 }
 
 function saveExpandedSet(expandedSet) {
   setCookie(COOKIE_NAME, [...expandedSet].join(","), COOKIE_DAYS);
 }
 
-function isExpanded(index) {
+function isExpanded(key) {
   const stored = getExpandedSet();
   if (stored === null) {
-    // No cookie: single GPU = expanded, multi-GPU = collapsed
+    // No cookie: single GPU total = expanded, multi-GPU = collapsed
     return totalGpuCount <= 1;
   }
-  return stored.has(index);
+  return stored.has(key);
 }
 
-function toggleGpu(index) {
+function toggleGpu(key) {
   let expanded = getExpandedSet();
   if (expanded === null) {
-    // Initialize from current default
     expanded = new Set();
     if (totalGpuCount <= 1) {
-      for (let i = 0; i < totalGpuCount; i++) expanded.add(i);
+      // Initialize: expand all if single GPU
+      if (lastData) {
+        lastData.hosts.forEach((h) => {
+          h.data.gpus.forEach((_, i) => expanded.add(h.host_id + "-" + i));
+        });
+      }
     }
   }
-  if (expanded.has(index)) {
-    expanded.delete(index);
+  if (expanded.has(key)) {
+    expanded.delete(key);
   } else {
-    expanded.add(index);
+    expanded.add(key);
   }
   saveExpandedSet(expanded);
 
-  const card = document.querySelectorAll(".gpu-card")[index];
+  const card = document.querySelector('.gpu-card[data-gpu-key="' + key + '"]');
   if (!card) return;
 
   card.classList.toggle("collapsed");
 
-  // When expanding, (re-)create charts since canvas may have been hidden
   if (!card.classList.contains("collapsed")) {
-    if (gpuCharts[index]) {
-      Object.values(gpuCharts[index]).forEach((c) => c.destroy());
-      delete gpuCharts[index];
+    if (gpuCharts[key]) {
+      Object.values(gpuCharts[key]).forEach((c) => c.destroy());
+      delete gpuCharts[key];
     }
-    // Small delay to let CSS transition expose the canvas
     setTimeout(() => {
-      if (lastData && lastData.gpus[index]) {
-        createOrUpdateCharts(index, lastData.gpus[index]);
+      if (lastData) {
+        lastData.hosts.forEach((h) => {
+          h.data.gpus.forEach((gpu, i) => {
+            if (h.host_id + "-" + i === key) {
+              createOrUpdateCharts(key, gpu);
+            }
+          });
+        });
       }
     }, 50);
   }
@@ -161,9 +174,9 @@ function formatValue(raw) {
 }
 
 // ===== History =====
-function initHistory(gpuIndex) {
-  if (!gpuHistory[gpuIndex]) {
-    gpuHistory[gpuIndex] = {
+function initHistory(key) {
+  if (!gpuHistory[key]) {
+    gpuHistory[key] = {
       labels: [],
       gpuUtil: [],
       memUsed: [],
@@ -173,9 +186,9 @@ function initHistory(gpuIndex) {
   }
 }
 
-function pushHistory(gpuIndex, gpuUtil, memUsed, temp, power) {
-  initHistory(gpuIndex);
-  const h = gpuHistory[gpuIndex];
+function pushHistory(key, gpuUtil, memUsed, temp, power) {
+  initHistory(key);
+  const h = gpuHistory[key];
   const now = new Date().toLocaleTimeString("zh-TW", {
     hour: "2-digit",
     minute: "2-digit",
@@ -265,39 +278,38 @@ function createChartConfig(label, data, labels, color, yMax, unit) {
   };
 }
 
-function createOrUpdateCharts(gpuIndex, gpu) {
-  // Don't create charts for collapsed cards
-  const card = document.querySelectorAll(".gpu-card")[gpuIndex];
+function createOrUpdateCharts(key, gpu) {
+  const card = document.querySelector('.gpu-card[data-gpu-key="' + key + '"]');
   if (card && card.classList.contains("collapsed")) return;
 
-  const h = gpuHistory[gpuIndex];
+  const h = gpuHistory[key];
   if (!h) return;
 
   const memTotal = parseNumeric(gpu.memory.total) || 100;
   const powerLimit = parseNumeric(gpu.power.limit) || parseNumeric(gpu.power.max_limit) || 400;
 
   const chartDefs = [
-    { id: `chart-util-${gpuIndex}`, label: "GPU 使用率", data: h.gpuUtil, color: "#76b900", max: 100, unit: "%" },
-    { id: `chart-mem-${gpuIndex}`, label: "記憶體使用量", data: h.memUsed, color: "#4fc3f7", max: memTotal, unit: "MiB" },
-    { id: `chart-temp-${gpuIndex}`, label: "溫度", data: h.temp, color: "#ffb74d", max: 100, unit: "\u00B0C" },
-    { id: `chart-power-${gpuIndex}`, label: "功耗", data: h.power, color: "#ef5350", max: Math.ceil(powerLimit / 50) * 50, unit: "W" },
+    { id: "chart-util-" + key, label: "GPU 使用率", data: h.gpuUtil, color: "#76b900", max: 100, unit: "%" },
+    { id: "chart-mem-" + key, label: "記憶體使用量", data: h.memUsed, color: "#4fc3f7", max: memTotal, unit: "MiB" },
+    { id: "chart-temp-" + key, label: "溫度", data: h.temp, color: "#ffb74d", max: 100, unit: "\u00B0C" },
+    { id: "chart-power-" + key, label: "功耗", data: h.power, color: "#ef5350", max: Math.ceil(powerLimit / 50) * 50, unit: "W" },
   ];
 
-  if (!gpuCharts[gpuIndex]) gpuCharts[gpuIndex] = {};
+  if (!gpuCharts[key]) gpuCharts[key] = {};
 
   chartDefs.forEach((def) => {
     const canvas = document.getElementById(def.id);
     if (!canvas) return;
 
-    if (gpuCharts[gpuIndex][def.id]) {
-      const chart = gpuCharts[gpuIndex][def.id];
+    if (gpuCharts[key][def.id]) {
+      const chart = gpuCharts[key][def.id];
       chart.data.labels = h.labels;
       chart.data.datasets[0].data = def.data;
       chart.options.scales.y.max = def.max;
       chart.update("none");
     } else {
       const ctx = canvas.getContext("2d");
-      gpuCharts[gpuIndex][def.id] = new Chart(
+      gpuCharts[key][def.id] = new Chart(
         ctx,
         createChartConfig(def.label, def.data, h.labels, def.color, def.max, def.unit)
       );
@@ -306,7 +318,8 @@ function createOrUpdateCharts(gpuIndex, gpu) {
 }
 
 // ===== Render =====
-function renderGPU(gpu, index, gpuCount) {
+function renderGPU(gpu, key, gpuCount) {
+  const localIndex = key.split("-").pop();
   const gpuUtil = parseNumeric(gpu.utilization.gpu);
   const memUsed = parseNumeric(gpu.memory.used);
   const memTotal = parseNumeric(gpu.memory.total);
@@ -318,9 +331,9 @@ function renderGPU(gpu, index, gpuCount) {
   const powerLimit = parseNumeric(gpu.power.limit);
   const powerPct = powerDraw !== null && powerLimit ? (powerDraw / powerLimit) * 100 : 0;
 
-  pushHistory(index, gpuUtil, memUsed, temp, powerDraw);
+  pushHistory(key, gpuUtil, memUsed, temp, powerDraw);
 
-  const collapsed = !isExpanded(index);
+  const collapsed = !isExpanded(key);
   const collapsedClass = collapsed ? " collapsed" : "";
 
   const fanDisplay =
@@ -347,12 +360,12 @@ function renderGPU(gpu, index, gpuCount) {
       : `<tr><td colspan="4" class="no-process">目前沒有執行中的程序</td></tr>`;
 
   return `
-    <div class="gpu-card${collapsedClass}" data-gpu-index="${index}">
-      <div class="gpu-card-header" onclick="toggleGpu(${index})">
+    <div class="gpu-card${collapsedClass}" data-gpu-key="${key}">
+      <div class="gpu-card-header" onclick="toggleGpu('${key}')">
         <div class="gpu-header-left">
           <div class="gpu-toggle">&#9660;</div>
           <div>
-            <div class="gpu-name">GPU ${index}: ${gpu.name}</div>
+            <div class="gpu-name">GPU ${localIndex}: ${gpu.name}</div>
             <div class="gpu-id">PCI Bus: ${gpu.pci.bus_id} | UUID: ${gpu.uuid.substring(0, 20)}...</div>
           </div>
         </div>
@@ -447,19 +460,19 @@ function renderGPU(gpu, index, gpuCount) {
           <div class="charts-grid">
             <div class="chart-container">
               <div class="chart-label" style="color:var(--accent-green)">GPU 使用率 (%)</div>
-              <div class="chart-wrapper"><canvas id="chart-util-${index}"></canvas></div>
+              <div class="chart-wrapper"><canvas id="chart-util-${key}"></canvas></div>
             </div>
             <div class="chart-container">
               <div class="chart-label" style="color:var(--accent-blue)">記憶體使用量 (MiB)</div>
-              <div class="chart-wrapper"><canvas id="chart-mem-${index}"></canvas></div>
+              <div class="chart-wrapper"><canvas id="chart-mem-${key}"></canvas></div>
             </div>
             <div class="chart-container">
               <div class="chart-label" style="color:var(--accent-orange)">溫度 (\u00B0C)</div>
-              <div class="chart-wrapper"><canvas id="chart-temp-${index}"></canvas></div>
+              <div class="chart-wrapper"><canvas id="chart-temp-${key}"></canvas></div>
             </div>
             <div class="chart-container">
               <div class="chart-label" style="color:var(--accent-red)">功耗 (W)</div>
-              <div class="chart-wrapper"><canvas id="chart-power-${index}"></canvas></div>
+              <div class="chart-wrapper"><canvas id="chart-power-${key}"></canvas></div>
             </div>
           </div>
         </div>
@@ -533,44 +546,85 @@ function renderLoading() {
 let initialized = false;
 let lastData = null;
 
+function getStructureSignature(data) {
+  return data.hosts.map((h) => h.host_id + ":" + h.data.gpus.length).sort().join("|");
+}
+
 async function fetchData() {
   try {
-    const resp = await fetch("/api/gpu");
+    const resp = await fetch("/api/all-gpus");
     const data = await resp.json();
 
-    if (data.error) {
-      renderError(data.error + (data.detail ? ": " + data.detail : ""));
-      return;
-    }
-
     lastData = data;
-    totalGpuCount = data.gpus.length;
 
-    // Update header
-    document.getElementById("driver-version").textContent = data.driver_version || "--";
-    document.getElementById("cuda-version").textContent = data.cuda_version || "--";
-    document.getElementById("gpu-count").textContent = data.gpus.length + " GPU";
+    // Count total GPUs
+    totalGpuCount = 0;
+    data.hosts.forEach((h) => { totalGpuCount += h.data.gpus.length; });
+
+    // Update header with local host info
+    const localHost = data.hosts.find((h) => h.host_id === "local");
+    if (localHost) {
+      document.getElementById("driver-version").textContent = localHost.data.driver_version || "--";
+      document.getElementById("cuda-version").textContent = localHost.data.cuda_version || "--";
+    }
+    document.getElementById("gpu-count").textContent = totalGpuCount + " GPU";
 
     const now = new Date();
     document.getElementById("last-update").textContent = "最後更新: " + now.toLocaleTimeString("zh-TW");
 
     const container = document.getElementById("gpu-container");
-    if (!initialized || container.querySelectorAll(".gpu-card").length !== data.gpus.length) {
-      // Destroy old charts
+    const newStructure = getStructureSignature(data);
+
+    if (!initialized || lastStructure !== newStructure) {
+      // Full re-render: structure changed (hosts added/removed/came online/offline)
       Object.values(gpuCharts).forEach((charts) => {
         Object.values(charts).forEach((c) => c.destroy());
       });
       Object.keys(gpuCharts).forEach((k) => delete gpuCharts[k]);
 
-      container.innerHTML = data.gpus.map((gpu, i) => renderGPU(gpu, i, data.gpus.length)).join("");
+      let html = "";
+      data.hosts.forEach((hostEntry) => {
+        const driverInfo = hostEntry.data.driver_version && hostEntry.data.driver_version !== "N/A"
+          ? "驅動 " + hostEntry.data.driver_version + " | CUDA " + (hostEntry.data.cuda_version || "--")
+          : "";
+        html += '<div class="host-group">';
+        html += '<div class="host-group-header">';
+        html += '<span>&#128421; ' + hostEntry.host_name + '</span>';
+        if (driverInfo) {
+          html += '<span class="host-driver-info">' + driverInfo + '</span>';
+        }
+        html += '</div>';
+        hostEntry.data.gpus.forEach((gpu, i) => {
+          const key = hostEntry.host_id + "-" + i;
+          html += renderGPU(gpu, key, hostEntry.data.gpus.length);
+        });
+        html += '</div>';
+      });
+
+      if (html === "") {
+        html = '<div class="error-card"><h3>無可用 GPU</h3><p>本機及所有遠端主機均無法取得 GPU 資訊</p></div>';
+      }
+
+      container.innerHTML = html;
 
       // Create charts for expanded cards
-      data.gpus.forEach((gpu, i) => createOrUpdateCharts(i, gpu));
+      data.hosts.forEach((hostEntry) => {
+        hostEntry.data.gpus.forEach((gpu, i) => {
+          const key = hostEntry.host_id + "-" + i;
+          createOrUpdateCharts(key, gpu);
+        });
+      });
+
+      lastStructure = newStructure;
       initialized = true;
     } else {
-      data.gpus.forEach((gpu, i) => {
-        updateGPUMetrics(gpu, i);
-        createOrUpdateCharts(i, gpu);
+      // Incremental update
+      data.hosts.forEach((hostEntry) => {
+        hostEntry.data.gpus.forEach((gpu, i) => {
+          const key = hostEntry.host_id + "-" + i;
+          updateGPUMetrics(gpu, key);
+          createOrUpdateCharts(key, gpu);
+        });
       });
     }
   } catch (err) {
@@ -578,7 +632,7 @@ async function fetchData() {
   }
 }
 
-function updateGPUMetrics(gpu, index) {
+function updateGPUMetrics(gpu, key) {
   const gpuUtil = parseNumeric(gpu.utilization.gpu);
   const memUsed = parseNumeric(gpu.memory.used);
   const memTotal = parseNumeric(gpu.memory.total);
@@ -590,9 +644,9 @@ function updateGPUMetrics(gpu, index) {
   const powerLimit = parseNumeric(gpu.power.limit);
   const powerPct = powerDraw !== null && powerLimit ? (powerDraw / powerLimit) * 100 : 0;
 
-  pushHistory(index, gpuUtil, memUsed, temp, powerDraw);
+  pushHistory(key, gpuUtil, memUsed, temp, powerDraw);
 
-  const card = document.querySelectorAll(".gpu-card")[index];
+  const card = document.querySelector('.gpu-card[data-gpu-key="' + key + '"]');
   if (!card) return;
 
   // Update summary (always visible when collapsed)
@@ -650,6 +704,80 @@ function updateGPUMetrics(gpu, index) {
 
   const procTitle = card.querySelector(".process-section-title");
   if (procTitle) procTitle.innerHTML = `&#128187; 執行中的程序 (${gpu.processes.length})`;
+}
+
+// ===== Settings Modal =====
+function openSettingsModal() {
+  document.getElementById("settings-modal").classList.add("active");
+  loadHosts();
+}
+
+function closeSettingsModal() {
+  document.getElementById("settings-modal").classList.remove("active");
+}
+
+// Close modal when clicking overlay background
+document.addEventListener("click", function (e) {
+  if (e.target.id === "settings-modal") {
+    closeSettingsModal();
+  }
+});
+
+async function loadHosts() {
+  try {
+    const resp = await fetch("/api/hosts");
+    const hosts = await resp.json();
+    const listEl = document.getElementById("host-list");
+    if (hosts.length === 0) {
+      listEl.innerHTML = '<div class="no-hosts">尚未新增遠端主機</div>';
+      return;
+    }
+    listEl.innerHTML = hosts
+      .map(
+        (h) => `
+      <div class="host-item">
+        <div class="host-item-info">
+          <span class="host-item-name">${h.name}</span>
+          <span class="host-item-url">${h.url}</span>
+        </div>
+        <button class="host-delete-btn" onclick="deleteHost('${h.id}')">刪除</button>
+      </div>`
+      )
+      .join("");
+  } catch (err) {
+    document.getElementById("host-list").innerHTML =
+      '<div class="no-hosts">載入主機列表失敗</div>';
+  }
+}
+
+async function addHost() {
+  const nameInput = document.getElementById("host-name-input");
+  const urlInput = document.getElementById("host-url-input");
+  const name = nameInput.value.trim();
+  const url = urlInput.value.trim();
+  if (!name || !url) return;
+
+  try {
+    await fetch("/api/hosts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name, url: url }),
+    });
+    nameInput.value = "";
+    urlInput.value = "";
+    loadHosts();
+  } catch (err) {
+    // silently fail
+  }
+}
+
+async function deleteHost(id) {
+  try {
+    await fetch("/api/hosts/" + id, { method: "DELETE" });
+    loadHosts();
+  } catch (err) {
+    // silently fail
+  }
 }
 
 // Initial load

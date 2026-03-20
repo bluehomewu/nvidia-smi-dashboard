@@ -727,6 +727,193 @@ body {
   vertical-align: middle;
 }
 
+/* ===== Settings Button ===== */
+.settings-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--text-secondary);
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.settings-btn:hover {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+/* ===== Host Group ===== */
+.host-group {
+  margin-bottom: 8px;
+}
+
+.host-group-header {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-green);
+  padding: 10px 0 6px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--accent-green-dim);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.host-group-header .host-driver-info {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  width: 90%;
+  max-width: 560px;
+  box-shadow: var(--shadow);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: var(--accent-red);
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.host-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--detail-row-border);
+}
+
+.host-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.host-item-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.host-item-url {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.host-delete-btn {
+  background: var(--accent-red-dim);
+  color: var(--accent-red);
+  border: 1px solid var(--accent-red);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 12px;
+  transition: background 0.2s ease;
+}
+
+.host-delete-btn:hover {
+  background: var(--accent-red);
+  color: #fff;
+}
+
+.host-add-form {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.host-add-form input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.host-add-form input:focus {
+  outline: none;
+  border-color: var(--accent-green);
+}
+
+.host-add-btn {
+  padding: 10px 20px;
+  background: var(--accent-green);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+
+.host-add-btn:hover {
+  opacity: 0.85;
+}
+
+.no-hosts {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 20px 0;
+  font-style: italic;
+}
+
 /* ===== Responsive: Tablet ===== */
 @media (max-width: 768px) {
   .header {
@@ -850,6 +1037,20 @@ body {
     gap: 8px;
     padding: 12px 16px;
     text-align: center;
+  }
+
+  .host-add-form {
+    flex-direction: column;
+  }
+
+  .host-group-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .host-group-header .host-driver-info {
+    margin-left: 0;
   }
 }
 

@@ -1,14 +1,56 @@
+import json
 import os
 import platform
 import subprocess
+import uuid
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from flask import Flask, jsonify, render_template
+import requests as http_requests
+from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
 IS_WINDOWS = platform.system() == "Windows"
+HOSTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hosts.json")
 
+
+# ===== Host Management Helpers =====
+
+def _load_hosts():
+    """Load remote hosts list from hosts.json."""
+    try:
+        with open(HOSTS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+def _save_hosts(hosts):
+    """Save remote hosts list to hosts.json."""
+    with open(HOSTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(hosts, f, ensure_ascii=False, indent=2)
+
+
+def _fetch_remote_gpu(host):
+    """Fetch GPU data from a remote host. Returns None if offline."""
+    try:
+        url = host["url"].rstrip("/") + "/api/gpu"
+        resp = http_requests.get(url, timeout=3)
+        resp.raise_for_status()
+        data = resp.json()
+        if "error" in data:
+            return None
+        return {
+            "host_id": host["id"],
+            "host_name": host["name"],
+            "data": data,
+        }
+    except (http_requests.RequestException, ValueError, KeyError):
+        return None
+
+
+# ===== Process Name Resolution =====
 
 def _get_process_name(pid):
     """Resolve process name by PID. Uses /proc on Linux, tasklist on Windows."""
@@ -40,6 +82,8 @@ def _get_process_name(pid):
         pass
     return ""
 
+
+# ===== nvidia-smi Parsing =====
 
 def parse_nvidia_smi():
     """Call nvidia-smi and parse XML output into structured data."""
@@ -151,6 +195,8 @@ def parse_nvidia_smi():
     return {"gpus": gpus, "driver_version": driver_version, "cuda_version": cuda_version}
 
 
+# ===== Routes =====
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -160,6 +206,62 @@ def index():
 def gpu_data():
     data = parse_nvidia_smi()
     return jsonify(data)
+
+
+@app.route("/api/hosts", methods=["GET"])
+def list_hosts():
+    return jsonify(_load_hosts())
+
+
+@app.route("/api/hosts", methods=["POST"])
+def add_host():
+    body = request.get_json(silent=True) or {}
+    name = (body.get("name") or "").strip()
+    url = (body.get("url") or "").strip()
+    if not name or not url:
+        return jsonify({"error": "name 和 url 為必填欄位"}), 400
+
+    hosts = _load_hosts()
+    new_host = {"id": uuid.uuid4().hex[:8], "name": name, "url": url}
+    hosts.append(new_host)
+    _save_hosts(hosts)
+    return jsonify(new_host), 201
+
+
+@app.route("/api/hosts/<host_id>", methods=["DELETE"])
+def delete_host(host_id):
+    hosts = _load_hosts()
+    new_hosts = [h for h in hosts if h["id"] != host_id]
+    if len(new_hosts) == len(hosts):
+        return jsonify({"error": "找不到該主機"}), 404
+    _save_hosts(new_hosts)
+    return "", 204
+
+
+@app.route("/api/all-gpus")
+def all_gpus():
+    results = []
+
+    # Local GPU data
+    local_data = parse_nvidia_smi()
+    if "error" not in local_data:
+        results.append({
+            "host_id": "local",
+            "host_name": "本機",
+            "data": local_data,
+        })
+
+    # Remote hosts — fetch in parallel
+    hosts = _load_hosts()
+    if hosts:
+        with ThreadPoolExecutor(max_workers=10) as pool:
+            futures = {pool.submit(_fetch_remote_gpu, h): h for h in hosts}
+            for future in as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    results.append(result)
+
+    return jsonify({"hosts": results})
 
 
 if __name__ == "__main__":

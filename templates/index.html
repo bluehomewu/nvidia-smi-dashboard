@@ -48,6 +48,7 @@
           <span class="value" id="gpu-count">--</span>
         </div>
       </div>
+      <button class="settings-btn" onclick="openSettingsModal()" title="遠端主機管理">&#9881;</button>
       <div class="theme-toggle" title="切換顯示模式">
         <button class="theme-btn" data-theme-btn="light" onclick="setTheme('light')">&#9728;</button>
         <button class="theme-btn" data-theme-btn="auto" onclick="setTheme('auto')">&#9881;</button>
@@ -78,6 +79,23 @@
       </a>
     </div>
   </footer>
+
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2>遠端主機管理</h2>
+        <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="host-list"></div>
+        <div class="host-add-form">
+          <input type="text" id="host-name-input" placeholder="主機名稱（例：Server-A）">
+          <input type="text" id="host-url-input" placeholder="URL（例：http://192.168.1.100:5000）">
+          <button class="host-add-btn" onclick="addHost()">新增</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="/static/js/app.js"></script>

@@ -490,6 +490,7 @@ function renderGPU(gpu, index, gpuCount) {
         <!-- Processes -->
         <div class="process-section">
           <div class="process-section-title">&#128187; 執行中的程序 (${gpu.processes.length})</div>
+          <div class="process-table-wrap">
           <table class="process-table">
             <thead>
               <tr>
@@ -503,6 +504,7 @@ function renderGPU(gpu, index, gpuCount) {
               ${processRows}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>

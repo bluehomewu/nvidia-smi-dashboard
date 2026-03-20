@@ -594,8 +594,14 @@ body {
   color: var(--accent-blue);
 }
 
+.process-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .process-table {
   width: 100%;
+  min-width: 480px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -721,47 +727,205 @@ body {
   vertical-align: middle;
 }
 
-/* ===== Responsive ===== */
+/* ===== Responsive: Tablet ===== */
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
     gap: 12px;
-    padding: 16px;
+    padding: 14px 16px;
+  }
+
+  .header-left {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .driver-info {
+    width: 100%;
+    justify-content: center;
+    gap: 12px;
+    font-size: 12px;
   }
 
   .container {
+    padding: 12px;
+  }
+
+  .gpu-card {
+    margin-bottom: 16px;
+  }
+
+  .gpu-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .gpu-header-right {
+    width: 100%;
+  }
+
+  .gpu-card.collapsed .gpu-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    width: 100%;
+  }
+
+  .gpu-name {
+    font-size: 16px;
+  }
+
+  .gpu-id {
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 55vw;
+  }
+
+  .gpu-card-body {
     padding: 16px;
   }
 
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
 
-  .charts-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .details-grid {
-    grid-template-columns: 1fr;
+  .metric-card {
+    padding: 14px;
   }
 
   .metric-value {
     font-size: 22px;
   }
 
+  .metric-label {
+    font-size: 11px;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-container {
+    padding: 12px;
+  }
+
+  .chart-wrapper {
+    height: 160px;
+  }
+
+  .details-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .process-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .gpu-summary {
     gap: 10px;
     font-size: 11px;
   }
-}
 
-@media (max-width: 480px) {
-  .metrics-grid {
-    grid-template-columns: 1fr;
+  .theme-btn {
+    width: 36px;
+    height: 34px;
+    font-size: 17px;
   }
 
-  .gpu-summary {
-    flex-wrap: wrap;
+  .footer {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+    text-align: center;
+  }
+}
+
+/* ===== Responsive: Mobile ===== */
+@media (max-width: 480px) {
+  .header h1 {
+    font-size: 18px;
+  }
+
+  .driver-info {
+    font-size: 11px;
+    gap: 8px;
+  }
+
+  .container {
+    padding: 8px;
+  }
+
+  .gpu-card-header {
+    padding: 12px;
+  }
+
+  .gpu-name {
+    font-size: 14px;
+  }
+
+  .gpu-id {
+    font-size: 10px;
+    max-width: 70vw;
+  }
+
+  .gpu-card.collapsed .gpu-summary {
+    grid-template-columns: repeat(2, 1fr);
     gap: 6px;
+  }
+
+  .gpu-card-body {
+    padding: 12px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .metric-card {
+    padding: 12px;
+  }
+
+  .metric-value {
+    font-size: 18px;
+  }
+
+  .metric-sub {
+    font-size: 11px;
+  }
+
+  .progress-section {
+    margin-bottom: 16px;
+  }
+
+  .charts-grid {
+    gap: 10px;
+  }
+
+  .chart-wrapper {
+    height: 140px;
+  }
+
+  .detail-section {
+    padding: 14px;
+  }
+
+  .process-table th,
+  .process-table td {
+    padding: 8px 10px;
+    font-size: 12px;
   }
 }

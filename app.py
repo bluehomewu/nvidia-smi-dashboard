@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import platform
 import subprocess
@@ -8,6 +9,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests as http_requests
 from flask import Flask, jsonify, render_template, request
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -36,9 +40,12 @@ def _fetch_remote_gpu(host):
     """Fetch GPU data from a remote host. Returns None if offline."""
     try:
         url = host["url"].rstrip("/") + "/api/gpu"
-        resp = http_requests.get(url, timeout=3)
+        s = http_requests.Session()
+        s.headers["Connection"] = "close"
+        resp = s.get(url, timeout=10)
         resp.raise_for_status()
         data = resp.json()
+        s.close()
         if "error" in data:
             return None
         return {
@@ -46,7 +53,8 @@ def _fetch_remote_gpu(host):
             "host_name": host["name"],
             "data": data,
         }
-    except (http_requests.RequestException, ValueError, KeyError):
+    except Exception as e:
+        logger.warning("Failed to fetch GPU data from %s (%s): %s", host["name"], host["url"], e)
         return None
 
 

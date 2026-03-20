@@ -38,7 +38,7 @@ function setTheme(mode) {
 
 function updateThemeButtons() {
   const current = getThemeSetting();
-  document.querySelectorAll(".theme-btn").forEach((btn) => {
+  document.querySelectorAll("[data-theme-btn]").forEach((btn) => {
     btn.classList.toggle("active", btn.getAttribute("data-theme-btn") === current);
   });
 }
@@ -100,7 +100,6 @@ function saveExpandedSet(expandedSet) {
 function isExpanded(key) {
   const stored = getExpandedSet();
   if (stored === null) {
-    // No cookie: single GPU total = expanded, multi-GPU = collapsed
     return totalGpuCount <= 1;
   }
   return stored.has(key);
@@ -111,7 +110,6 @@ function toggleGpu(key) {
   if (expanded === null) {
     expanded = new Set();
     if (totalGpuCount <= 1) {
-      // Initialize: expand all if single GPU
       if (lastData) {
         lastData.hosts.forEach((h) => {
           h.data.gpus.forEach((_, i) => expanded.add(h.host_id + "-" + i));
@@ -189,7 +187,7 @@ function initHistory(key) {
 function pushHistory(key, gpuUtil, memUsed, temp, power) {
   initHistory(key);
   const h = gpuHistory[key];
-  const now = new Date().toLocaleTimeString("zh-TW", {
+  const now = new Date().toLocaleTimeString(getI18nLocale(), {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -289,10 +287,10 @@ function createOrUpdateCharts(key, gpu) {
   const powerLimit = parseNumeric(gpu.power.limit) || parseNumeric(gpu.power.max_limit) || 400;
 
   const chartDefs = [
-    { id: "chart-util-" + key, label: "GPU 使用率", data: h.gpuUtil, color: "#76b900", max: 100, unit: "%" },
-    { id: "chart-mem-" + key, label: "記憶體使用量", data: h.memUsed, color: "#4fc3f7", max: memTotal, unit: "MiB" },
-    { id: "chart-temp-" + key, label: "溫度", data: h.temp, color: "#ffb74d", max: 100, unit: "\u00B0C" },
-    { id: "chart-power-" + key, label: "功耗", data: h.power, color: "#ef5350", max: Math.ceil(powerLimit / 50) * 50, unit: "W" },
+    { id: "chart-util-" + key, label: S("gpu_utilization"), data: h.gpuUtil, color: "#76b900", max: 100, unit: "%" },
+    { id: "chart-mem-" + key, label: S("memory_usage"), data: h.memUsed, color: "#4fc3f7", max: memTotal, unit: "MiB" },
+    { id: "chart-temp-" + key, label: S("temperature"), data: h.temp, color: "#ffb74d", max: 100, unit: "\u00B0C" },
+    { id: "chart-power-" + key, label: S("power_draw"), data: h.power, color: "#ef5350", max: Math.ceil(powerLimit / 50) * 50, unit: "W" },
   ];
 
   if (!gpuCharts[key]) gpuCharts[key] = {};
@@ -339,7 +337,7 @@ function renderGPU(gpu, key, gpuCount) {
   const fanDisplay =
     gpu.fan_speed && gpu.fan_speed !== "N/A"
       ? `<div style="text-align:right">
-          <div style="font-size:13px;color:var(--text-secondary)">風扇轉速</div>
+          <div style="font-size:13px;color:var(--text-secondary)">${S("fan_speed")}</div>
           <div style="font-size:20px;font-weight:700">${gpu.fan_speed}</div>
         </div>`
       : "";
@@ -357,7 +355,7 @@ function renderGPU(gpu, key, gpuCount) {
         </tr>`
           )
           .join("")
-      : `<tr><td colspan="4" class="no-process">目前沒有執行中的程序</td></tr>`;
+      : `<tr><td colspan="4" class="no-process">${S("no_running_processes")}</td></tr>`;
 
   return `
     <div class="gpu-card${collapsedClass}" data-gpu-key="${key}">
@@ -372,19 +370,19 @@ function renderGPU(gpu, key, gpuCount) {
         <div class="gpu-header-right">
           <div class="gpu-summary">
             <div class="gpu-summary-item">
-              <span class="summary-label">使用率</span>
+              <span class="summary-label">${S("utilization_short")}</span>
               <span class="summary-val" style="color:var(--accent-green)" data-summary="util">${gpuUtil !== null ? gpuUtil + "%" : "--"}</span>
             </div>
             <div class="gpu-summary-item">
-              <span class="summary-label">記憶體</span>
+              <span class="summary-label">${S("memory_short")}</span>
               <span class="summary-val" style="color:var(--accent-blue)" data-summary="mem">${memPct.toFixed(1)}%</span>
             </div>
             <div class="gpu-summary-item">
-              <span class="summary-label">溫度</span>
+              <span class="summary-label">${S("temperature_short")}</span>
               <span class="summary-val" style="color:var(--accent-orange)" data-summary="temp">${temp !== null ? temp + "\u00B0C" : "--"}</span>
             </div>
             <div class="gpu-summary-item">
-              <span class="summary-label">功耗</span>
+              <span class="summary-label">${S("power_short")}</span>
               <span class="summary-val" style="color:var(--accent-red)" data-summary="power">${powerDraw !== null ? powerDraw.toFixed(1) + " W" : "--"}</span>
             </div>
           </div>
@@ -395,31 +393,31 @@ function renderGPU(gpu, key, gpuCount) {
         <!-- Key Metrics -->
         <div class="metrics-grid">
           <div class="metric-card green">
-            <div class="metric-label">GPU 使用率</div>
+            <div class="metric-label">${S("gpu_utilization")}</div>
             <div class="metric-value">${gpuUtil !== null ? gpuUtil + "%" : "--"}</div>
-            <div class="metric-sub">圖形處理器負載</div>
+            <div class="metric-sub">${S("gpu_load_sub")}</div>
           </div>
           <div class="metric-card blue">
-            <div class="metric-label">記憶體使用量</div>
+            <div class="metric-label">${S("memory_usage")}</div>
             <div class="metric-value">${memUsed !== null ? memUsed + " " + getUnit(gpu.memory.used) : "--"}</div>
-            <div class="metric-sub">共 ${formatValue(gpu.memory.total)} (${memPct.toFixed(1)}%)</div>
+            <div class="metric-sub">${S("memory_total_pct", formatValue(gpu.memory.total), memPct.toFixed(1) + "%")}</div>
           </div>
           <div class="metric-card orange">
-            <div class="metric-label">溫度</div>
+            <div class="metric-label">${S("temperature")}</div>
             <div class="metric-value">${temp !== null ? temp + "\u00B0C" : "--"}</div>
-            <div class="metric-sub">降速閾值 ${formatValue(gpu.temperature.gpu_slowdown)}</div>
+            <div class="metric-sub">${S("slowdown_threshold", formatValue(gpu.temperature.gpu_slowdown))}</div>
           </div>
           <div class="metric-card red">
-            <div class="metric-label">功耗</div>
+            <div class="metric-label">${S("power_draw")}</div>
             <div class="metric-value">${powerDraw !== null ? powerDraw.toFixed(1) + " W" : "--"}</div>
-            <div class="metric-sub">上限 ${formatValue(gpu.power.limit)}</div>
+            <div class="metric-sub">${S("power_limit", formatValue(gpu.power.limit))}</div>
           </div>
         </div>
 
         <!-- Progress Bars -->
         <div class="progress-section">
           <div class="progress-header">
-            <span class="progress-title">GPU 使用率</span>
+            <span class="progress-title">${S("gpu_utilization")}</span>
             <span class="progress-value" style="color:var(--accent-green)">${gpuUtil !== null ? gpuUtil + "%" : "--"}</span>
           </div>
           <div class="progress-bar">
@@ -428,7 +426,7 @@ function renderGPU(gpu, key, gpuCount) {
         </div>
         <div class="progress-section">
           <div class="progress-header">
-            <span class="progress-title">記憶體使用率</span>
+            <span class="progress-title">${S("memory_utilization")}</span>
             <span class="progress-value" style="color:var(--accent-blue)">${memPct.toFixed(1)}%</span>
           </div>
           <div class="progress-bar">
@@ -437,7 +435,7 @@ function renderGPU(gpu, key, gpuCount) {
         </div>
         <div class="progress-section">
           <div class="progress-header">
-            <span class="progress-title">溫度</span>
+            <span class="progress-title">${S("temperature")}</span>
             <span class="progress-value" style="color:var(--accent-orange)">${temp !== null ? temp + "\u00B0C" : "--"}</span>
           </div>
           <div class="progress-bar">
@@ -446,7 +444,7 @@ function renderGPU(gpu, key, gpuCount) {
         </div>
         <div class="progress-section">
           <div class="progress-header">
-            <span class="progress-title">功耗</span>
+            <span class="progress-title">${S("power_draw")}</span>
             <span class="progress-value" style="color:var(--accent-red)">${powerDraw !== null ? powerDraw.toFixed(1) + " W" : "--"}</span>
           </div>
           <div class="progress-bar">
@@ -456,22 +454,22 @@ function renderGPU(gpu, key, gpuCount) {
 
         <!-- Charts -->
         <div class="charts-section">
-          <div class="charts-title">歷史趨勢圖</div>
+          <div class="charts-title">${S("history_charts")}</div>
           <div class="charts-grid">
             <div class="chart-container">
-              <div class="chart-label" style="color:var(--accent-green)">GPU 使用率 (%)</div>
+              <div class="chart-label" style="color:var(--accent-green)">${S("chart_gpu_util")}</div>
               <div class="chart-wrapper"><canvas id="chart-util-${key}"></canvas></div>
             </div>
             <div class="chart-container">
-              <div class="chart-label" style="color:var(--accent-blue)">記憶體使用量 (MiB)</div>
+              <div class="chart-label" style="color:var(--accent-blue)">${S("chart_mem_usage")}</div>
               <div class="chart-wrapper"><canvas id="chart-mem-${key}"></canvas></div>
             </div>
             <div class="chart-container">
-              <div class="chart-label" style="color:var(--accent-orange)">溫度 (\u00B0C)</div>
+              <div class="chart-label" style="color:var(--accent-orange)">${S("chart_temperature")}</div>
               <div class="chart-wrapper"><canvas id="chart-temp-${key}"></canvas></div>
             </div>
             <div class="chart-container">
-              <div class="chart-label" style="color:var(--accent-red)">功耗 (W)</div>
+              <div class="chart-label" style="color:var(--accent-red)">${S("chart_power")}</div>
               <div class="chart-wrapper"><canvas id="chart-power-${key}"></canvas></div>
             </div>
           </div>
@@ -480,37 +478,37 @@ function renderGPU(gpu, key, gpuCount) {
         <!-- Detail Sections -->
         <div class="details-grid">
           <div class="detail-section">
-            <div class="detail-section-title">&#9201; 時脈頻率</div>
-            <div class="detail-row"><span class="detail-key">圖形時脈</span><span class="detail-val">${formatValue(gpu.clocks.graphics)}</span></div>
-            <div class="detail-row"><span class="detail-key">SM 時脈</span><span class="detail-val">${formatValue(gpu.clocks.sm)}</span></div>
-            <div class="detail-row"><span class="detail-key">記憶體時脈</span><span class="detail-val">${formatValue(gpu.clocks.memory)}</span></div>
+            <div class="detail-section-title">&#9201; ${S("clock_frequencies")}</div>
+            <div class="detail-row"><span class="detail-key">${S("graphics_clock")}</span><span class="detail-val">${formatValue(gpu.clocks.graphics)}</span></div>
+            <div class="detail-row"><span class="detail-key">${S("sm_clock")}</span><span class="detail-val">${formatValue(gpu.clocks.sm)}</span></div>
+            <div class="detail-row"><span class="detail-key">${S("memory_clock")}</span><span class="detail-val">${formatValue(gpu.clocks.memory)}</span></div>
           </div>
           <div class="detail-section">
-            <div class="detail-section-title">&#9889; 使用率詳情</div>
-            <div class="detail-row"><span class="detail-key">GPU 使用率</span><span class="detail-val">${formatValue(gpu.utilization.gpu)}</span></div>
-            <div class="detail-row"><span class="detail-key">記憶體使用率</span><span class="detail-val">${formatValue(gpu.utilization.memory)}</span></div>
-            <div class="detail-row"><span class="detail-key">編碼器</span><span class="detail-val">${formatValue(gpu.utilization.encoder)}</span></div>
-            <div class="detail-row"><span class="detail-key">解碼器</span><span class="detail-val">${formatValue(gpu.utilization.decoder)}</span></div>
+            <div class="detail-section-title">&#9889; ${S("utilization_details")}</div>
+            <div class="detail-row"><span class="detail-key">${S("gpu_utilization")}</span><span class="detail-val">${formatValue(gpu.utilization.gpu)}</span></div>
+            <div class="detail-row"><span class="detail-key">${S("memory_utilization")}</span><span class="detail-val">${formatValue(gpu.utilization.memory)}</span></div>
+            <div class="detail-row"><span class="detail-key">${S("encoder")}</span><span class="detail-val">${formatValue(gpu.utilization.encoder)}</span></div>
+            <div class="detail-row"><span class="detail-key">${S("decoder")}</span><span class="detail-val">${formatValue(gpu.utilization.decoder)}</span></div>
           </div>
           <div class="detail-section">
-            <div class="detail-section-title">&#128268; PCI 資訊</div>
+            <div class="detail-section-title">&#128268; ${S("pci_info")}</div>
             <div class="detail-row"><span class="detail-key">Bus ID</span><span class="detail-val">${formatValue(gpu.pci.bus_id)}</span></div>
-            <div class="detail-row"><span class="detail-key">PCIe 代數</span><span class="detail-val">Gen ${formatValue(gpu.pci.link_gen_current)}</span></div>
-            <div class="detail-row"><span class="detail-key">連結寬度</span><span class="detail-val">${formatValue(gpu.pci.link_width_current)}</span></div>
+            <div class="detail-row"><span class="detail-key">${S("pcie_generation")}</span><span class="detail-val">Gen ${formatValue(gpu.pci.link_gen_current)}</span></div>
+            <div class="detail-row"><span class="detail-key">${S("link_width")}</span><span class="detail-val">${formatValue(gpu.pci.link_width_current)}</span></div>
           </div>
         </div>
 
         <!-- Processes -->
         <div class="process-section">
-          <div class="process-section-title">&#128187; 執行中的程序 (${gpu.processes.length})</div>
+          <div class="process-section-title">&#128187; ${S("running_processes", gpu.processes.length)}</div>
           <div class="process-table-wrap">
           <table class="process-table">
             <thead>
               <tr>
                 <th>PID</th>
-                <th>類型</th>
-                <th>程序名稱</th>
-                <th>記憶體用量</th>
+                <th>${S("process_type")}</th>
+                <th>${S("process_name")}</th>
+                <th>${S("process_memory")}</th>
               </tr>
             </thead>
             <tbody>
@@ -527,7 +525,7 @@ function renderGPU(gpu, key, gpuCount) {
 function renderError(msg) {
   document.getElementById("gpu-container").innerHTML = `
     <div class="error-card">
-      <h3>錯誤</h3>
+      <h3>${S("error_title")}</h3>
       <p>${msg}</p>
     </div>
   `;
@@ -537,7 +535,7 @@ function renderLoading() {
   document.getElementById("gpu-container").innerHTML = `
     <div class="loading">
       <div class="spinner"></div>
-      <div>正在載入 GPU 資訊...</div>
+      <div>${S("loading_gpu_info")}</div>
     </div>
   `;
 }
@@ -548,6 +546,11 @@ let lastData = null;
 
 function getStructureSignature(data) {
   return data.hosts.map((h) => h.host_id + ":" + h.data.gpus.length).sort().join("|");
+}
+
+function getHostDisplayName(hostEntry) {
+  if (hostEntry.host_id === "local") return S("local_host");
+  return hostEntry.host_name;
 }
 
 async function fetchData() {
@@ -567,16 +570,16 @@ async function fetchData() {
       document.getElementById("driver-version").textContent = localHost.data.driver_version || "--";
       document.getElementById("cuda-version").textContent = localHost.data.cuda_version || "--";
     }
-    document.getElementById("gpu-count").textContent = totalGpuCount + " GPU";
+    document.getElementById("gpu-count").textContent = totalGpuCount + " " + S("gpu_count_suffix");
 
     const now = new Date();
-    document.getElementById("last-update").textContent = "最後更新: " + now.toLocaleTimeString("zh-TW");
+    document.getElementById("last-update").textContent = S("last_update", now.toLocaleTimeString(getI18nLocale()));
 
     const container = document.getElementById("gpu-container");
     const newStructure = getStructureSignature(data);
 
     if (!initialized || lastStructure !== newStructure) {
-      // Full re-render: structure changed (hosts added/removed/came online/offline)
+      // Full re-render
       Object.values(gpuCharts).forEach((charts) => {
         Object.values(charts).forEach((c) => c.destroy());
       });
@@ -584,12 +587,13 @@ async function fetchData() {
 
       let html = "";
       data.hosts.forEach((hostEntry) => {
+        const hostName = getHostDisplayName(hostEntry);
         const driverInfo = hostEntry.data.driver_version && hostEntry.data.driver_version !== "N/A"
-          ? "驅動 " + hostEntry.data.driver_version + " | CUDA " + (hostEntry.data.cuda_version || "--")
+          ? S("driver_cuda_info", hostEntry.data.driver_version, hostEntry.data.cuda_version || "--")
           : "";
         html += '<div class="host-group">';
         html += '<div class="host-group-header">';
-        html += '<span>&#128421; ' + hostEntry.host_name + '</span>';
+        html += '<span>&#128421; ' + hostName + '</span>';
         if (driverInfo) {
           html += '<span class="host-driver-info">' + driverInfo + '</span>';
         }
@@ -602,12 +606,11 @@ async function fetchData() {
       });
 
       if (html === "") {
-        html = '<div class="error-card"><h3>無可用 GPU</h3><p>本機及所有遠端主機均無法取得 GPU 資訊</p></div>';
+        html = '<div class="error-card"><h3>' + S("no_gpu_available") + '</h3><p>' + S("no_gpu_detail") + '</p></div>';
       }
 
       container.innerHTML = html;
 
-      // Create charts for expanded cards
       data.hosts.forEach((hostEntry) => {
         hostEntry.data.gpus.forEach((gpu, i) => {
           const key = hostEntry.host_id + "-" + i;
@@ -628,7 +631,7 @@ async function fetchData() {
       });
     }
   } catch (err) {
-    renderError("無法連線至伺服器: " + err.message);
+    renderError(S("server_connection_error", err.message));
   }
 }
 
@@ -649,7 +652,7 @@ function updateGPUMetrics(gpu, key) {
   const card = document.querySelector('.gpu-card[data-gpu-key="' + key + '"]');
   if (!card) return;
 
-  // Update summary (always visible when collapsed)
+  // Update summary
   const summaryUtil = card.querySelector('[data-summary="util"]');
   const summaryMem = card.querySelector('[data-summary="mem"]');
   const summaryTemp = card.querySelector('[data-summary="temp"]');
@@ -667,8 +670,8 @@ function updateGPUMetrics(gpu, key) {
   if (metricValues[3]) metricValues[3].textContent = powerDraw !== null ? powerDraw.toFixed(1) + " W" : "--";
 
   const metricSubs = card.querySelectorAll(".metric-sub");
-  if (metricSubs[1]) metricSubs[1].textContent = "共 " + formatValue(gpu.memory.total) + " (" + memPct.toFixed(1) + "%)";
-  if (metricSubs[3]) metricSubs[3].textContent = "上限 " + formatValue(gpu.power.limit);
+  if (metricSubs[1]) metricSubs[1].textContent = S("memory_total_pct", formatValue(gpu.memory.total), memPct.toFixed(1) + "%");
+  if (metricSubs[3]) metricSubs[3].textContent = S("power_limit", formatValue(gpu.power.limit));
 
   // Update progress bars
   const fills = card.querySelectorAll(".progress-fill");
@@ -699,24 +702,38 @@ function updateGPUMetrics(gpu, key) {
           </tr>`
             )
             .join("")
-        : `<tr><td colspan="4" class="no-process">目前沒有執行中的程序</td></tr>`;
+        : `<tr><td colspan="4" class="no-process">${S("no_running_processes")}</td></tr>`;
   }
 
   const procTitle = card.querySelector(".process-section-title");
-  if (procTitle) procTitle.innerHTML = `&#128187; 執行中的程序 (${gpu.processes.length})`;
+  if (procTitle) procTitle.innerHTML = `&#128187; ${S("running_processes", gpu.processes.length)}`;
 }
 
 // ===== Settings Modal =====
 function openSettingsModal() {
   document.getElementById("settings-modal").classList.add("active");
-  loadHosts();
+  updateThemeButtons();
+  updateLangSwitcher();
+  showSettingsPage("main");
 }
 
 function closeSettingsModal() {
   document.getElementById("settings-modal").classList.remove("active");
 }
 
-// Close modal when clicking overlay background
+function showSettingsPage(page) {
+  const mainPage = document.getElementById("settings-page-main");
+  const hostsPage = document.getElementById("settings-page-hosts");
+  if (page === "hosts") {
+    mainPage.classList.add("slide-out");
+    hostsPage.classList.add("active");
+    loadHosts();
+  } else {
+    mainPage.classList.remove("slide-out");
+    hostsPage.classList.remove("active");
+  }
+}
+
 document.addEventListener("click", function (e) {
   if (e.target.id === "settings-modal") {
     closeSettingsModal();
@@ -729,7 +746,7 @@ async function loadHosts() {
     const hosts = await resp.json();
     const listEl = document.getElementById("host-list");
     if (hosts.length === 0) {
-      listEl.innerHTML = '<div class="no-hosts">尚未新增遠端主機</div>';
+      listEl.innerHTML = '<div class="no-hosts">' + S("no_remote_hosts") + '</div>';
       return;
     }
     listEl.innerHTML = hosts
@@ -740,13 +757,13 @@ async function loadHosts() {
           <span class="host-item-name">${h.name}</span>
           <span class="host-item-url">${h.url}</span>
         </div>
-        <button class="host-delete-btn" onclick="deleteHost('${h.id}')">刪除</button>
+        <button class="host-delete-btn" onclick="deleteHost('${h.id}')">${S("delete_btn")}</button>
       </div>`
       )
       .join("");
   } catch (err) {
     document.getElementById("host-list").innerHTML =
-      '<div class="no-hosts">載入主機列表失敗</div>';
+      '<div class="no-hosts">' + S("load_hosts_failed") + '</div>';
   }
 }
 
@@ -780,7 +797,31 @@ async function deleteHost(id) {
   }
 }
 
-// Initial load
-renderLoading();
-fetchData();
-setInterval(fetchData, REFRESH_INTERVAL);
+// ===== Language Switcher =====
+function updateLangSwitcher() {
+  const current = getLangSetting();
+  document.querySelectorAll("[data-lang-btn]").forEach((btn) => {
+    btn.classList.toggle("active", btn.getAttribute("data-lang-btn") === current);
+  });
+}
+
+async function onLangChange(value) {
+  await switchLanguage(value);
+  updateLangSwitcher();
+  updateThemeButtons();
+  // Force full re-render of GPU cards
+  initialized = false;
+  lastStructure = "";
+  if (lastData) {
+    fetchData();
+  }
+}
+
+// ===== Initialization =====
+(async function () {
+  await initI18n();
+  updateLangSwitcher();
+  renderLoading();
+  fetchData();
+  setInterval(fetchData, REFRESH_INTERVAL);
+})();

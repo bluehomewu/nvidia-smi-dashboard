@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_title">NVIDIA GPU 監控面板</string>
+    <string name="header_title">GPU 監控面板</string>
+
+    <!-- Header -->
+    <string name="driver_version_label">驅動版本</string>
+    <string name="cuda_version_label">CUDA 版本</string>
+    <string name="device_count_label">裝置數量</string>
+    <string name="remote_host_management">遠端主機管理</string>
+    <string name="toggle_theme">切換顯示模式</string>
+    <string name="connecting">正在連線...</string>
+    <string name="loading_gpu_info">正在載入 GPU 資訊...</string>
+    <string name="last_update">最後更新: %s</string>
+
+    <!-- GPU Summary -->
+    <string name="utilization_short">使用率</string>
+    <string name="memory_short">記憶體</string>
+    <string name="temperature_short">溫度</string>
+    <string name="power_short">功耗</string>
+    <string name="fan_speed">風扇轉速</string>
+
+    <!-- Metric Cards -->
+    <string name="gpu_utilization">GPU 使用率</string>
+    <string name="memory_usage">記憶體使用量</string>
+    <string name="temperature">溫度</string>
+    <string name="power_draw">功耗</string>
+    <string name="gpu_load_sub">圖形處理器負載</string>
+    <string name="memory_total_pct">共 %1$s (%2$s)</string>
+    <string name="slowdown_threshold">降速閾值 %s</string>
+    <string name="power_limit">上限 %s</string>
+
+    <!-- Progress Bars -->
+    <string name="memory_utilization">記憶體使用率</string>
+
+    <!-- Charts -->
+    <string name="history_charts">歷史趨勢圖</string>
+    <string name="chart_gpu_util">GPU 使用率 (%)</string>
+    <string name="chart_mem_usage">記憶體使用量 (MiB)</string>
+    <string name="chart_temperature">溫度 (°C)</string>
+    <string name="chart_power">功耗 (W)</string>
+
+    <!-- Detail Sections -->
+    <string name="clock_frequencies">時脈頻率</string>
+    <string name="graphics_clock">圖形時脈</string>
+    <string name="sm_clock">SM 時脈</string>
+    <string name="memory_clock">記憶體時脈</string>
+    <string name="utilization_details">使用率詳情</string>
+    <string name="encoder">編碼器</string>
+    <string name="decoder">解碼器</string>
+    <string name="pci_info">PCI 資訊</string>
+    <string name="pcie_generation">PCIe 代數</string>
+    <string name="link_width">連結寬度</string>
+
+    <!-- Process Table -->
+    <string name="running_processes">執行中的程序 (%s)</string>
+    <string name="process_type">類型</string>
+    <string name="process_name">程序名稱</string>
+    <string name="process_memory">記憶體用量</string>
+    <string name="no_running_processes">目前沒有執行中的程序</string>
+
+    <!-- Error / Status -->
+    <string name="error_title">錯誤</string>
+    <string name="no_gpu_available">無可用 GPU</string>
+    <string name="no_gpu_detail">本機及所有遠端主機均無法取得 GPU 資訊</string>
+    <string name="server_connection_error">無法連線至伺服器: %s</string>
+
+    <!-- Host Group -->
+    <string name="local_host">本機</string>
+    <string name="driver_cuda_info">驅動 %1$s | CUDA %2$s</string>
+    <string name="gpu_count_suffix">GPU</string>
+
+    <!-- Settings Modal -->
+    <string name="settings">設定</string>
+    <string name="theme_label">主題</string>
+    <string name="theme_light">淺色</string>
+    <string name="theme_auto">自動</string>
+    <string name="theme_dark">深色</string>
+    <string name="language_label">語言</string>
+    <string name="lang_auto">自動</string>
+    <string name="lang_en">English</string>
+    <string name="lang_zh_tw">繁體中文</string>
+    <string name="remote_hosts">遠端主機</string>
+    <string name="remote_hosts_desc">管理遠端主機連線</string>
+    <string name="back">返回</string>
+    <string name="no_remote_hosts">尚未新增遠端主機</string>
+    <string name="host_name_placeholder">主機名稱（例：Server-A）</string>
+    <string name="host_url_placeholder">URL（例：http://192.168.1.100:5000）</string>
+    <string name="add_btn">新增</string>
+    <string name="delete_btn">刪除</string>
+    <string name="load_hosts_failed">載入主機列表失敗</string>
+</resources>

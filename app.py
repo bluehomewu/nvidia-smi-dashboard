@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests as http_requests
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -114,11 +114,11 @@ def parse_nvidia_smi():
             timeout=10,
         )
         if result.returncode != 0:
-            return {"error": "nvidia-smi 執行失敗", "detail": result.stderr}
+            return {"error": "nvidia-smi execution failed", "detail": result.stderr}
     except FileNotFoundError:
-        return {"error": "找不到 nvidia-smi 指令，請確認已安裝 NVIDIA 驅動程式"}
+        return {"error": "nvidia-smi not found, please verify NVIDIA drivers are installed"}
     except subprocess.TimeoutExpired:
-        return {"error": "nvidia-smi 執行逾時"}
+        return {"error": "nvidia-smi execution timed out"}
 
     root = ET.fromstring(result.stdout)
 
@@ -205,9 +205,17 @@ def parse_nvidia_smi():
 
 # ===== Routes =====
 
+RES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "res")
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/res/<path:filepath>")
+def serve_res(filepath):
+    return send_from_directory(RES_DIR, filepath, mimetype="application/xml")
 
 
 @app.route("/api/gpu")
@@ -227,7 +235,7 @@ def add_host():
     name = (body.get("name") or "").strip()
     url = (body.get("url") or "").strip()
     if not name or not url:
-        return jsonify({"error": "name 和 url 為必填欄位"}), 400
+        return jsonify({"error": "name and url are required"}), 400
 
     hosts = _load_hosts()
     new_host = {"id": uuid.uuid4().hex[:8], "name": name, "url": url}
@@ -241,7 +249,7 @@ def delete_host(host_id):
     hosts = _load_hosts()
     new_hosts = [h for h in hosts if h["id"] != host_id]
     if len(new_hosts) == len(hosts):
-        return jsonify({"error": "找不到該主機"}), 404
+        return jsonify({"error": "Host not found"}), 404
     _save_hosts(new_hosts)
     return "", 204
 
@@ -255,7 +263,7 @@ def all_gpus():
     if "error" not in local_data:
         results.append({
             "host_id": "local",
-            "host_name": "本機",
+            "host_name": "local",
             "data": local_data,
         })
 

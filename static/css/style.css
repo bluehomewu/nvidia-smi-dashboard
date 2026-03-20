@@ -174,41 +174,7 @@ body {
   margin-left: 4px;
 }
 
-/* ===== Theme Toggle ===== */
-.theme-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 6px;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.theme-toggle:hover {
-  border-color: var(--accent-green);
-}
-
-.theme-btn {
-  width: 30px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 15px;
-  line-height: 28px;
-  text-align: center;
-  color: var(--text-secondary);
-  transition: background 0.2s ease, color 0.2s ease;
-}
-
-.theme-btn.active {
-  background: var(--accent-green);
-  color: #000;
-}
+/* ===== (Theme & Language now inside settings modal) ===== */
 
 .status-dot {
   width: 10px;
@@ -735,8 +701,10 @@ body {
   background: var(--bg-card);
   border-radius: 8px;
   cursor: pointer;
-  font-size: 18px;
   color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
@@ -789,8 +757,41 @@ body {
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   width: 90%;
-  max-width: 560px;
+  max-width: 480px;
+  max-height: 85vh;
   box-shadow: var(--shadow);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Modal Pages (slide animation) ===== */
+.modal-page {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal-page-right {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-card);
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-page-right.active {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-page.slide-out {
+  transform: translateX(-30%);
+  opacity: 0.3;
 }
 
 .modal-header {
@@ -799,11 +800,13 @@ body {
   align-items: center;
   padding: 18px 24px;
   border-bottom: 1px solid var(--border-color);
+  gap: 12px;
 }
 
 .modal-header h2 {
   font-size: 18px;
   font-weight: 700;
+  flex: 1;
 }
 
 .modal-close {
@@ -812,16 +815,134 @@ body {
   font-size: 24px;
   color: var(--text-secondary);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .modal-close:hover {
   color: var(--accent-red);
 }
 
-.modal-body {
-  padding: 24px;
+.modal-back {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--accent-green);
+  cursor: pointer;
+  font-weight: 600;
+  font-family: inherit;
+  flex-shrink: 0;
+  padding: 0;
+  transition: opacity 0.2s ease;
 }
 
+.modal-back:hover {
+  opacity: 0.7;
+}
+
+.modal-body {
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ===== Settings Sections ===== */
+.settings-section {
+  margin-bottom: 20px;
+}
+
+.settings-section:last-child {
+  margin-bottom: 0;
+}
+
+.settings-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.settings-btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-opt-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.settings-opt-btn:hover {
+  border-color: var(--accent-green);
+}
+
+.settings-opt-btn.active {
+  border-color: var(--accent-green);
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+}
+
+.settings-opt-btn .opt-icon {
+  font-size: 18px;
+}
+
+/* ===== Settings Navigation Button ===== */
+.settings-nav-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  font-family: inherit;
+}
+
+.settings-nav-btn:hover {
+  border-color: var(--accent-green);
+  background: var(--bg-card-hover);
+}
+
+.settings-nav-info {
+  text-align: left;
+}
+
+.settings-nav-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-nav-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.settings-nav-arrow {
+  font-size: 14px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* ===== Host Management (Page 2) ===== */
 .host-item {
   display: flex;
   justify-content: space-between;
@@ -870,6 +991,7 @@ body {
 
 .host-add-form {
   display: flex;
+  flex-direction: column;
   gap: 10px;
   margin-top: 16px;
 }
@@ -899,7 +1021,7 @@ body {
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
-  flex-shrink: 0;
+  width: 100%;
   transition: opacity 0.2s ease;
 }
 
@@ -1026,21 +1148,11 @@ body {
     font-size: 11px;
   }
 
-  .theme-btn {
-    width: 36px;
-    height: 34px;
-    font-size: 17px;
-  }
-
   .footer {
     flex-direction: column;
     gap: 8px;
     padding: 12px 16px;
     text-align: center;
-  }
-
-  .host-add-form {
-    flex-direction: column;
   }
 
   .host-group-header {
